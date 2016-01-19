@@ -106,8 +106,6 @@ def mk_igmp_msg(group, src_list):
 def mk_igmp_join(src, group):
     ip_hdr = mk_ip_hdr(src,dst)    
     igmp = mk_igmp_msg(group, [])
-    #print 'igmp msg:'
-    #dump(igmp)
     igmp = update_igmp_checksum(igmp)
     p = ip_hdr + igmp
     p = update_ip_checksum(p)

@@ -45,7 +45,6 @@ def signal_handler(signal, frame):
     global stop
     print 'Test interrupted by Ctrl+C!'
     stop = True
-    #sys.exit(0)
 
 class igmp_t(threading.Thread):
     def run(self):
