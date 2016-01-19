@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 from socket import *
 from struct import *
 from itertools import *

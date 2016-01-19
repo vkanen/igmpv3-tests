@@ -1,5 +1,5 @@
-#!/usr/bin/python
-
+#!/usr/bin/env python
+#
 # send IGMPv3 join msgs to "all IGMPv3 capable routers" (224.0.0.22)
 # host routing must be set up before hand to send the packets
 # out from correct interface. For example, in Linux it could be
