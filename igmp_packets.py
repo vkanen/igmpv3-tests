@@ -1,3 +1,5 @@
+# IGMPv3 packet contstruction functions
+
 from socket import *
 from struct import *
 from itertools import *
@@ -8,6 +10,7 @@ import threading
 import signal
 
 IGMP_EXCLUDE = 0x04
+IGMP_INCLUDE = 0x03
 dst = '224.0.0.22'
 
 #todo
@@ -79,7 +82,8 @@ def dump_packet(data):
         sys.stdout.write(' %0.2x' % ord(x))
     print ''
 
-def mk_igmp_msg(group, src_list):
+#IGMPv3 
+def mk_igmp_msg(group, record_type, src_list):
     num_of_sources = len(src_list)
     igmp_type = 0x22 #8 bits, igmp v3
     igmp_max_resp = 0x00 #8 bits, igmp v3
@@ -87,7 +91,7 @@ def mk_igmp_msg(group, src_list):
     #igmp_group = 0x00000000 #32 bits
     igmp_s_qrv = 0x0000 #16 bits
     igmp_num_of_records = 0x0001 #16 bits
-    igmp_record_type = IGMP_EXCLUDE #8bits (report)
+    igmp_record_type = record_type #8bits (report)
     igmp_aux_data_len = 0x00 #8bits
     igmp_num_src = num_of_sources #16 bits
     igmp_src_list = [] #list of 32 bits addresses
@@ -101,11 +105,29 @@ def mk_igmp_msg(group, src_list):
     igmpv3_report += pack('!4s', inet_aton(group))
     return igmpv3_report
 
+#source not specified
 def mk_igmp_join(src, group):
     ip_hdr = mk_ip_hdr(src,dst)    
-    igmp = mk_igmp_msg(group, [])
+    igmp = mk_igmp_msg(group, IGMP_EXCLUDE, [])
     igmp = update_igmp_checksum(igmp)
     p = ip_hdr + igmp
     p = update_ip_checksum(p)
     return p
-    
+
+#source not specified
+def mk_igmp_leave(src, group):
+    ip_hdr = mk_ip_hdr(src,dst)
+    igmp = mk_igmp_msg(group, IGMP_INCLUDE, [])
+    igmp = update_igmp_checksum(igmp)
+    p = ip_hdr + igmp
+    p = update_ip_checksum(p)
+    return p
+
+#source not specified
+def mk_igmp_report(src, record_type, group):
+    ip_hdr = mk_ip_hdr(src,dst)
+    igmp = mk_igmp_msg(group, record_type, [])
+    igmp = update_igmp_checksum(igmp)
+    p = ip_hdr + igmp
+    p = update_ip_checksum(p)
+    return p
