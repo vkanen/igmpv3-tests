@@ -22,9 +22,10 @@ parser.add_argument('-n', '--number', help='number of different mcgs to join. Th
 parser.add_argument('-d', '--delta', help='delay in milliseconds between sent packets', type=int, default=100)
 parser.add_argument('-m', '--mcgroup', help='first address in the IPv4 MC range', type=str, default='225.0.0.1')
 parser.add_argument('-D', '--dump', help='print hex dump of sent packets', action='store_true')
+parser.add_argument('-l', '--list_of_srcs', help='source address list for (S,G) entries', nargs='+', default=[])
 required = parser.add_argument_group('required named arguments')
 required.add_argument('-s', '--source', help='IGMP message source', type=str, required=True)
-required.add_argument('-t', '--type', help='IGMP record type: join (0x03) or leave (0x04)', type=str, choices=['join','leave'], required=True)
+required.add_argument('-t', '--type', help='IGMP record type: join or leave', type=str, choices=['join','leave'], required=True)
 args = parser.parse_args()
 
 if not(args.number in range(1, MAX_NUM_OF_GROUPS)):
@@ -50,12 +51,18 @@ def signal_handler(signal, frame):
 class igmp_t(threading.Thread):
     def run(self):
         if args.type == 'join':
-            rec_type = 0x04
+            src_list = args.list_of_srcs
+            if src_list == []:
+                rec_type = 0x04 # include src list data sources
+            else:
+                rec_type = 0x03 # exclude empty list => all sources
         elif args.type == 'leave':
             rec_type = 0x03
+            src_list = []            
         else:
             print 'invalid IGMP record type.'
             sys.exit(1)
+        print 'rec_type: ' + str(rec_type) ###
         global stop
         inc = 0
         a1 = args.mcgroup.split('.')[1]
@@ -70,7 +77,7 @@ class igmp_t(threading.Thread):
                     break
                 inc = inc + 1
                 print str(inc) + ': Sending IGMP report for group: ' + group
-                igmp_r = mk_igmp_report(args.source, rec_type, group)
+                igmp_r = mk_igmp_report(args.source, rec_type, group, src_list)
                 if (args.dump == True):
                     dump_packet(igmp_r)
                 slock.acquire()

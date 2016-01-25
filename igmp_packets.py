@@ -100,9 +100,11 @@ def mk_igmp_msg(group, record_type, src_list):
     igmpv3_report = pack('!BBHHHBBH', igmp_type, igmp_max_resp, igmp_checksum,
                          igmp_s_qrv, igmp_num_of_records, igmp_record_type,
                          igmp_aux_data_len, igmp_num_src)
+
+    igmpv3_report += pack('!4s', inet_aton(group))
     for a in src_list:
         igmpv3_report += pack('!4s', inet_aton(a))
-    igmpv3_report += pack('!4s', inet_aton(group))
+    #igmpv3_report += pack('!4s', inet_aton(group))
     return igmpv3_report
 
 #source not specified
@@ -124,9 +126,9 @@ def mk_igmp_leave(src, group):
     return p
 
 #source not specified
-def mk_igmp_report(src, record_type, group):
+def mk_igmp_report(src, record_type, group, src_list):
     ip_hdr = mk_ip_hdr(src,dst)
-    igmp = mk_igmp_msg(group, record_type, [])
+    igmp = mk_igmp_msg(group, record_type, src_list)
     igmp = update_igmp_checksum(igmp)
     p = ip_hdr + igmp
     p = update_ip_checksum(p)
