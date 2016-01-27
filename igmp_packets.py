@@ -9,9 +9,12 @@ import IN
 import threading
 import signal
 
+IGMPV2_REPORT = 0x16
+IGMPV3_REPORT = 0x22
+IGMP_LEAVE = 0x17
 IGMP_EXCLUDE = 0x04
 IGMP_INCLUDE = 0x03
-dst = '224.0.0.22'
+IGMPV3_ALL_ROUTERS = '224.0.0.22'
 
 #todo
 def is_ipv4_mc(mcg):
@@ -82,54 +85,73 @@ def dump_packet(data):
         sys.stdout.write(' %0.2x' % ord(x))
     print ''
 
-#IGMPv3 
-def mk_igmp_msg(group, record_type, src_list):
-    num_of_sources = len(src_list)
-    igmp_type = 0x22 #8 bits, igmp v3
-    igmp_max_resp = 0x00 #8 bits, igmp v3
-    igmp_checksum = 0x0000 #16 bits
-    #igmp_group = 0x00000000 #32 bits
-    igmp_s_qrv = 0x0000 #16 bits
-    igmp_num_of_records = 0x0001 #16 bits
-    igmp_record_type = record_type #8bits (report)
-    igmp_aux_data_len = 0x00 #8bits
-    igmp_num_src = num_of_sources #16 bits
-    igmp_src_list = [] #list of 32 bits addresses
-    igmp_group = 0x00000000 #32 bits
+def mk_igmp_msg(msg_type, group, record_type, src_list):
+    if msg_type == IGMPV2_REPORT or msg_type == IGMP_LEAVE:
+        pkt = pack('!BBH4s', msg_type, 0, 0, inet_aton(group))
+    elif msg_type == IGMPV3_REPORT:
+        pkt = pack('!BBHHHBBH', msg_type, 0x00, 0x0000, 0x0000, 0x0001, record_type,
+                   0x00, len(src_list))
+        pkt += pack('!4s', inet_aton(group))
+        for a in src_list:
+            pkt += pack('!4s', inet_aton(a))
+    else:
+        print 'unsupported report type: ' + str(msg_type)
+        sys.exit(1)
+    return pkt
 
-    igmpv3_report = pack('!BBHHHBBH', igmp_type, igmp_max_resp, igmp_checksum,
-                         igmp_s_qrv, igmp_num_of_records, igmp_record_type,
-                         igmp_aux_data_len, igmp_num_src)
+def mk_igmpv3_join_msg(src, group, src_list):
+    if src_list == []:
+        rec_type = IGMP_EXCLUDE # exclude src list data sources
+    else:
+        rec_type = IGMP_INCLUDE # include empty list => "all sources"
+    pkt = mk_igmp_msg(IGMPV3_REPORT, group, rec_type, src_list) 
+    return pkt
 
-    igmpv3_report += pack('!4s', inet_aton(group))
-    for a in src_list:
-        igmpv3_report += pack('!4s', inet_aton(a))
-    #igmpv3_report += pack('!4s', inet_aton(group))
-    return igmpv3_report
+def mk_igmpv3_leave_msg(src, group, src_list):
+    return mk_igmp_msg(IGMPV3_REPORT, group, IGMP_INCLUDE, [])
 
-#source not specified
-def mk_igmp_join(src, group):
-    ip_hdr = mk_ip_hdr(src,dst)    
-    igmp = mk_igmp_msg(group, IGMP_EXCLUDE, [])
+def mk_igmpv2_join_msg(src, group, src_list):
+    return mk_igmp_msg(IGMPV2_REPORT, group, 0, [])
+
+def mk_igmpv2_leave_msg(src, group, src_list):
+    return mk_igmp_msg(IGMP_LEAVE, group, 0, [])
+
+##########################################################################################################
+#igmp_version: 'v2', 'v3'
+#src IP src address of the MC subscriber
+#report type: 'join', 'leave'
+#group: IPv4 MC group
+#src_list: list of MC sources if source specific MC is used (leave empty, [], for (*,G) entries) or for v2
+##########################################################################################################
+def mk_igmp_report(igmp_version, src, report_type, group, src_list):
+    if igmp_version == 'v3':
+        dst = IGMPV3_ALL_ROUTERS
+        if report_type == 'join':
+            mk_igmp = mk_igmpv3_join_msg
+        elif report_type == 'leave':
+            mk_igmp = mk_igmpv3_leave_msg
+            src_list = []            
+        else:
+            print "unsupported IGMP report type " + report_type + ". Supported values: 'join' and 'lave'" 
+            sys.exit(1)
+    elif igmp_version == 'v2':
+        dst = group
+        if report_type == 'join':
+            mk_igmp = mk_igmpv2_join_msg
+            src_list = []
+        elif report_type == 'leave':
+            mk_igmp = mk_igmpv2_leave_msg
+            src_list = []
+        else:
+            print "unsupported IGMP report type " + report_type + ". Supported values: 'join' and 'lave'" 
+            sys.exit(1)
+    else:
+        print "unsupported IGMP version " + igmp_version + ". Supported versions are 'v2' & 'v3'"
+        sys.exit(1)
+
+    igmp = mk_igmp(src, group, src_list)
     igmp = update_igmp_checksum(igmp)
-    p = ip_hdr + igmp
-    p = update_ip_checksum(p)
-    return p
-
-#source not specified
-def mk_igmp_leave(src, group):
     ip_hdr = mk_ip_hdr(src,dst)
-    igmp = mk_igmp_msg(group, IGMP_INCLUDE, [])
-    igmp = update_igmp_checksum(igmp)
-    p = ip_hdr + igmp
-    p = update_ip_checksum(p)
-    return p
-
-#source not specified
-def mk_igmp_report(src, record_type, group, src_list):
-    ip_hdr = mk_ip_hdr(src,dst)
-    igmp = mk_igmp_msg(group, record_type, src_list)
-    igmp = update_igmp_checksum(igmp)
     p = ip_hdr + igmp
     p = update_ip_checksum(p)
     return p
