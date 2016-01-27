@@ -62,7 +62,6 @@ class igmp_t(threading.Thread):
                         report_type = 'leave'
                     info_s = '{0:4} {1:41}'.format(str(inc) + ':', 'Sending IGMP' + args.igmp_version + ' report (' + report_type + ') for group: ')
                     info_s += '{0:15}'.format(group)
-                    #print str(inc) + 'Sending IGMP' + args.igmp_version + ' report (' + report_type + ') for group: ' + group
                     print info_s
                     igmp_r = mk_igmp_report(args.igmp_version, args.source, report_type, group, [])
                     if (args.dump == True):

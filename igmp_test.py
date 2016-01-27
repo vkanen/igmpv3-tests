@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
-# send IGMPv3 join/leave msgs to "all IGMPv3 capable routers" (224.0.0.22)
+# send IGMPv2/IGMPv3 join/leave report msgs to 224.0.0.22 (IGMPv3)
+# MC group destination address (IGMPv2)
 # host routing must be set up before hand to send the packets
 # out from correct interface. For example, in Linux it could be
 # something like: "route add 224.0.0.0/8 dev <ifname>".
@@ -58,17 +59,11 @@ class igmp_t(threading.Thread):
     def run(self):
         if args.type == 'join':
             src_list = args.list_of_srcs
-            if src_list == []:
-                rec_type = 0x04 # exclude src list data sources
-            else:
-                rec_type = 0x03 # include empty list => all sources
         elif args.type == 'leave':
-            rec_type = 0x03
             src_list = []            
         else:
-            print 'invalid IGMP record type.'
+            print 'unsupported IGMP report type: ' + args.type
             sys.exit(1)
-        #print 'rec_type: ' + str(rec_type) ###
         global stop
         inc = 0
         a1 = args.mcgroup.split('.')[1]
@@ -82,9 +77,9 @@ class igmp_t(threading.Thread):
                     stop = True
                     break
                 inc = inc + 1
-                #print str(inc) + ': Sending IGMP report for group: ' + group
-                print str(inc) + ': Sending IGMP' + args.igmp_version + ' report for group: ' + group
-                #igmp_r = mk_igmp_report(args.igmp_version, args.source, rec_type, group, src_list)
+                info_s = '{0:4} {1:41}'.format(str(inc) + ':', 'Sending IGMP' + args.igmp_version + ' report (' + args.type + ') for group: ')
+                info_s += '{0:15}'.format(group)
+                print info_s
                 igmp_r = mk_igmp_report(args.igmp_version, args.source, args.type, group, src_list)
                 if (args.dump == True):
                     dump_packet(igmp_r)
