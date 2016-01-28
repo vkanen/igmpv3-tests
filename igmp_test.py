@@ -8,9 +8,12 @@
 
 from igmp_packets import *
 import argparse
+import time
+import datetime
 
 ############ start of editable variables ############
-MAX_NUM_OF_GROUPS = 16000
+MAX_NUM_OF_GROUPS = 16000                           # 
+ETHERNET_HEADER_SIZE = 14                           # assuming no tagging
 ############ end of editable variables ##############
 
 dst = '224.0.0.22' # "to all IGMPv3 capable routers"
@@ -60,7 +63,7 @@ def signal_handler(signal, frame):
     stop = True
 
 class igmp_t(threading.Thread):
-    def run(self):
+    def run(self):    
         if args.type == 'join':
             src_list = args.list_of_srcs
         elif args.type == 'leave':
@@ -70,10 +73,13 @@ class igmp_t(threading.Thread):
             sys.exit(1)
         global stop
         inc = 0
+        sent_bytes = 0
         a0 = args.mcgroup.split('.')[0]
         a1 = args.mcgroup.split('.')[1]
         a2 = args.mcgroup.split('.')[2]
         a3 = args.mcgroup.split('.')[3]
+        start_time = datetime.datetime.now()
+        print 'test start time: ' + str(start_time)
         for i,j, k in product(range(int(a1),255),range(int(a2),255),range(int(a3),255)):
             if (not stop):
                 if inc < args.number:
@@ -82,18 +88,29 @@ class igmp_t(threading.Thread):
                     stop = True
                     break
                 inc = inc + 1
-                info_s = '{0:4} {1:41}'.format(str(inc) + ':', 'Sending IGMP' + args.igmp_version + ' report (' + args.type + ') for group: ')
+                info_s = '{0:6} {1:27}'.format(str(inc) + '.', str((datetime.datetime.now())))
+                info_s += '{0:41}'.format('Sending IGMP' + args.igmp_version + ' report (' + args.type + ') for group: ')
                 info_s += '{0:15}'.format(group)
                 print info_s
                 igmp_r = mk_igmp_report(args.igmp_version, args.source, args.type, group, src_list)
+                sent_bytes += len(igmp_r) + ETHERNET_HEADER_SIZE
                 if (args.dump == True):
-                    dump_packet(igmp_r)
+                    dump_packet(igmp_r)                
                 slock.acquire()
                 s.sendto(igmp_r, (dst, 0))
                 slock.release()
                 sleep(float(args.delta)/float(1000))
             else:
                 break
+        # print some test stats
+        stop_time = datetime.datetime.now()
+        test_delta = stop_time - start_time
+        print '\ntest duration was ' + str(test_delta)
+        avg_rate = (sent_bytes * 8) / float(test_delta.microseconds + test_delta.seconds * 1000000)
+        pkts_per_second = inc / float(test_delta.microseconds/float(1000000) + test_delta.seconds)
+        info_s = str(sent_bytes) + ' bytes sent at rate ' 
+        info_s += format('%.7f' % avg_rate) + ' Mbps (avg ' + format('%.8f' % pkts_per_second) + ' packets/s)'
+        print info_s
 
 s = socket( AF_INET, SOCK_RAW, IPPROTO_RAW )
 s.setsockopt(IPPROTO_IP, IP_HDRINCL, 1)
