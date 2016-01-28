@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 #
-# send IGMPv2/IGMPv3 join/leave report msgs to 224.0.0.22 (IGMPv3)
+# send IGMPv2/IGMPv3 join/leave report msgs to 224.0.0.22 (IGMPv3) or
 # MC group destination address (IGMPv2)
+#
 # host routing must be set up before hand to send the packets
 # out from correct interface. For example, in Linux it could be
-# something like: "route add 224.0.0.0/8 dev <ifname>".
+# something like: "route add -net 224.0.0.0/8 dev <ifname>".
 
 from igmp_packets import *
 import argparse
@@ -23,14 +24,14 @@ parser = argparse.ArgumentParser(description='Send IGMPv3 join msgs to 224.0.0.2
                                  epilog='Example of use: igmpv3_test.py -n 100 -s 192.168.1.2 -t join')
 parser.add_argument('-n', '--number', help='number of different mcgs to join. The script will choose these automatically', 
                     type=int, default=1)
-parser.add_argument('-d', '--delta', help='delay in milliseconds between sent packets', type=int, default=100)
+parser.add_argument('-d', '--delta', help='delay in microseconds between sent packets', type=int, default=100)
 parser.add_argument('-m', '--mcgroup', help='first address in the IPv4 MC range', type=str, default='225.0.0.1')
 parser.add_argument('-D', '--dump', help='print hex dump of sent packets', action='store_true')
 parser.add_argument('-l', '--list_of_srcs', help='source address list for (S,G) entries', nargs='+', default=[])
 parser.add_argument('-i', '--igmp_version', help='IGMP version: v2 or v3', type=str, choices=['v2','v3'], default='v3')
 required = parser.add_argument_group('required named arguments')
-required.add_argument('-s', '--source', help='IGMP message source', type=str, required=True)
-required.add_argument('-t', '--type', help='IGMP msg type: join or leave', type=str, choices=['join','leave'], required=True)
+required.add_argument('-s', '--source', help='src address of sent packets', type=str, required=True)
+required.add_argument('-t', '--type', help="IGMP report message type", type=str, choices=['join','leave'], required=True)
 
 args = parser.parse_args()
 
@@ -99,7 +100,7 @@ class igmp_t(threading.Thread):
                 slock.acquire()
                 s.sendto(igmp_r, (dst, 0))
                 slock.release()
-                sleep(float(args.delta)/float(1000))
+                sleep(float(args.delta)/float(1000000))
             else:
                 break
         # print some test stats
@@ -109,7 +110,7 @@ class igmp_t(threading.Thread):
         avg_rate = (sent_bytes * 8) / float(test_delta.microseconds + test_delta.seconds * 1000000)
         pkts_per_second = inc / float(test_delta.microseconds/float(1000000) + test_delta.seconds)
         info_s = str(sent_bytes) + ' bytes sent at rate ' 
-        info_s += format('%.7f' % avg_rate) + ' Mbps (avg ' + format('%.8f' % pkts_per_second) + ' packets/s)'
+        info_s += format('%.3f' % avg_rate) + ' Mbps (avg ' + format('%.0f' % pkts_per_second) + ' packets/s)'
         print info_s
 
 s = socket( AF_INET, SOCK_RAW, IPPROTO_RAW )
@@ -122,7 +123,6 @@ join_thread = igmp_t()
 join_thread.start()
 signal.signal(signal.SIGINT, signal_handler)
 
-# main thread could do something useful too...
 while(not stop):
     sleep(1)
 

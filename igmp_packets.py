@@ -1,4 +1,7 @@
 # IGMPv3 packet contstruction functions
+# Provides functions to create full packets, including chechsums.
+# This may come handy when using raw sockets by-passing Kernel's
+# own settings (such as dependencies on IGMPv2 or IGMPv3)
 
 from socket import *
 from struct import *
@@ -101,9 +104,9 @@ def mk_igmp_msg(msg_type, group, record_type, src_list):
 
 def mk_igmpv3_join_msg(src, group, src_list):
     if src_list == []:
-        rec_type = IGMP_EXCLUDE # exclude src list data sources
+        rec_type = IGMP_EXCLUDE # exclude empty src => all sources (*,G)
     else:
-        rec_type = IGMP_INCLUDE # include empty list => "all sources"
+        rec_type = IGMP_INCLUDE # include non empty src list => (S,G)
     pkt = mk_igmp_msg(IGMPV3_REPORT, group, rec_type, src_list) 
     return pkt
 
