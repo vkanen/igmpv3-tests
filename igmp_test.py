@@ -46,6 +46,10 @@ if not is_ipv4_mc(args.mcgroup):
     print 'Error: invalid IPv4 multicast address '
     sys.exit(1)
 
+
+#print args.mcgroup
+#sys.exit(0)
+
 def parse_args(args):
     print 'todo:'
     #todo: check argument validity. E.g. no source-address-lists in "leave" msg etc
@@ -66,13 +70,14 @@ class igmp_t(threading.Thread):
             sys.exit(1)
         global stop
         inc = 0
+        a0 = args.mcgroup.split('.')[0]
         a1 = args.mcgroup.split('.')[1]
         a2 = args.mcgroup.split('.')[2]
         a3 = args.mcgroup.split('.')[3]
         for i,j, k in product(range(int(a1),255),range(int(a2),255),range(int(a3),255)):
             if (not stop):
                 if inc < args.number:
-                    group = '225.{0}.{1}.{2}'.format(i,j,k) 
+                    group = a0 + '.{0}.{1}.{2}'.format(i,j,k) 
                 else:
                     stop = True
                     break

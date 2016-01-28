@@ -7,11 +7,12 @@
 #
 # Raw sockets are used here so we can by-pass Kernel's stack and interface
 # settings.
+#
+# This scripts needs to be excecuted as root (sudo).
 
 from string import *
 from igmp_packets import *
 import argparse
-
 
 ############ start of editable variables ############
 MAX_NUM_OF_JOIN_LEAVE = 100000
