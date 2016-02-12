@@ -7,6 +7,7 @@
 # out from correct interface. For example, in Linux it could be
 # something like: "route add -net 224.0.0.0/8 dev <ifname>".
 
+from socket import *
 from igmp_packets import *
 import argparse
 import time
@@ -124,7 +125,7 @@ join_thread.start()
 signal.signal(signal.SIGINT, signal_handler)
 
 while(not stop):
-    sleep(1)
+    sleep(0.1)
 
 join_thread.join()
 s.close()
