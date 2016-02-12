@@ -12,11 +12,22 @@ from igmp_packets import *
 import argparse
 import time
 import datetime
+import os
 
 ############ start of editable variables ############
 MAX_NUM_OF_GROUPS = 16000                           # 
 ETHERNET_HEADER_SIZE = 14                           # assuming no tagging
 ############ end of editable variables ##############
+
+# exitcodes
+IGMP_TEST_INSUFFICIENT_PRIVILEDGES = 126 
+IGMP_TEST_INVALID_ARG = 128
+IGMP_TEST_KILL = 137
+IGMP_TEST_ERROR = 1
+
+if os.geteuid() != 0: # accessing system sockets require root priviledges
+    print('Indufficient priviledges to run the script: you need root priviledges to run this script. Hint: try sudo ./igmp_test.py')
+    sys.exit(IGMP_TEST_INSUFFICIENT_PRIVILEDGES)
 
 dst = '224.0.0.22' # "to all IGMPv3 capable routers"
 slock = threading.Semaphore() # socket is global. For now, only one task per socket though...
@@ -38,22 +49,18 @@ args = parser.parse_args()
 
 if not(args.number in range(1, MAX_NUM_OF_GROUPS)):
     print 'Error: invalid number of multicast groups. Max number is ' + str(MAX_NUM_OF_GROUPS)
-    sys.exit(1)
+    sys.exit(IGMP_TEST_INVALID_ARG)
 
 if args.source != '':
     try:        
         inet_aton(args.source)
     except error:
         print 'Error: invalid source IP address: ' + args.source
-        sys.exit(2)
+        sys.exit(IGMP_TEST_INVALID_ARG)
 
 if not is_ipv4_mc(args.mcgroup):
     print 'Error: invalid IPv4 multicast address '
-    sys.exit(1)
-
-
-#print args.mcgroup
-#sys.exit(0)
+    sys.exit(IGMP_TEST_INVALID_ARG)
 
 def parse_args(args):
     print 'todo:'
@@ -72,7 +79,7 @@ class igmp_t(threading.Thread):
             src_list = []            
         else:
             print 'unsupported IGMP report type: ' + args.type
-            sys.exit(1)
+            sys.exit(IGMP_TEST_INVALID_ARG)
         global stop
         inc = 0
         sent_bytes = 0
