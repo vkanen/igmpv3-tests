@@ -26,7 +26,7 @@ IGMP_TEST_KILL = 137
 IGMP_TEST_ERROR = 1
 
 if os.geteuid() != 0: # accessing system sockets require root priviledges
-    print('Indufficient priviledges to run the script: you need root priviledges to run this script. Hint: try sudo ./igmp_test.py')
+    print('Indufficient priviledges to run the script: you need to be a root to execute this. Hint: try sudo ./igmp_test.py')
     sys.exit(IGMP_TEST_INSUFFICIENT_PRIVILEDGES)
 
 dst = '224.0.0.22' # "to all IGMPv3 capable routers"
