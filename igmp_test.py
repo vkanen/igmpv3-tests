@@ -5,7 +5,7 @@
 #
 # host routing must be set up before hand to send the packets
 # out from correct interface. For example, in Linux it could be
-# something like: "route add -net 224.0.0.0/8 dev <ifname>".
+# something like: "route add -net 224.0.0.0/4 dev <ifname>".
 
 from socket import *
 from igmp_packets import *
@@ -25,11 +25,14 @@ IGMP_TEST_INVALID_ARG = 128
 IGMP_TEST_KILL = 137
 IGMP_TEST_ERROR = 1
 
+# multicast addresses
+ALL_MC_ROUTERS_IN_LAN = '224.0.0.2'
+ALL_IGMPV3_ROUTERS_IN_LAN = '224.0.0.22'
+
 if os.geteuid() != 0: # accessing system sockets require root priviledges
     print('Indufficient priviledges to run the script: you need to be a root to execute this. Hint: try sudo ./igmp_test.py')
     sys.exit(IGMP_TEST_INSUFFICIENT_PRIVILEDGES)
 
-dst = '224.0.0.22' # "to all IGMPv3 capable routers"
 slock = threading.Semaphore() # socket is global. For now, only one task per socket though...
 
 parser = argparse.ArgumentParser(description='Send IGMPv3 join msgs to 224.0.0.22 (all IGMPv3 routers)', 
@@ -105,7 +108,11 @@ class igmp_t(threading.Thread):
                 sent_bytes += len(igmp_r) + ETHERNET_HEADER_SIZE
                 if (args.dump == True):
                     dump_packet(igmp_r)                
-                slock.acquire()
+                if (args.igmp_version == '2'):
+                    dst = ALL_MC_ROUTERS_IN_LAN
+                else:
+                    dst = ALL_IGMPV3_ROUTERS_IN_LAN
+                slock.acquire()                
                 s.sendto(igmp_r, (dst, 0))
                 slock.release()
                 sleep(float(args.delta)/float(1000000))

@@ -18,6 +18,7 @@ IGMP_LEAVE = 0x17
 IGMP_EXCLUDE = 0x04
 IGMP_INCLUDE = 0x03
 IGMPV3_ALL_ROUTERS = '224.0.0.22'
+ALL_MC_ROUTERS_IN_LAN = '224.0.0.2'
 
 #todo
 def is_ipv4_mc(mcg):
@@ -138,7 +139,7 @@ def mk_igmp_report(igmp_version, src, report_type, group, src_list):
             print "unsupported IGMP report type " + report_type + ". Supported values: 'join' and 'lave'" 
             sys.exit(1)
     elif igmp_version == 'v2':
-        dst = group
+        dst = ALL_MC_ROUTERS_IN_LAN
         if report_type == 'join':
             mk_igmp = mk_igmpv2_join_msg
             src_list = []
