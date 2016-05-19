@@ -12,11 +12,16 @@ import IN
 import threading
 import signal
 
+#IGMP msg types
 IGMPV2_REPORT = 0x16
 IGMPV3_REPORT = 0x22
 IGMP_LEAVE = 0x17
-IGMP_EXCLUDE = 0x04
-IGMP_INCLUDE = 0x03
+#IGMP interface filtering states
+IGMP_INCLUDE = 0x01
+IGMP_EXCLUDE = 0x02
+IGMP_CHG_TO_INCLUDE = 0x03
+IGMP_CHG_TO_EXCLUDE = 0x04
+#LAN MC addresses
 IGMPV3_ALL_ROUTERS = '224.0.0.22'
 ALL_MC_ROUTERS_IN_LAN = '224.0.0.2' # for IGMPv2
 
@@ -108,12 +113,12 @@ def mk_igmpv3_join_msg(src, group, src_list, filter_mode):
     if filter_mode == 'exclude':
         rec_type = IGMP_EXCLUDE
     else:
-        rec_type = IGMP_INCLUDE
+        rec_type = IGMP_CHG_TO_INCLUDE
     pkt = mk_igmp_msg(IGMPV3_REPORT, group, rec_type, src_list) 
     return pkt
 
 def mk_igmpv3_leave_msg(src, group, src_list, filter_mode):
-    return mk_igmp_msg(IGMPV3_REPORT, group, IGMP_INCLUDE, [])
+    return mk_igmp_msg(IGMPV3_REPORT, group, IGMP_CHG_TO_INCLUDE, [])
 
 def mk_igmpv2_join_msg(src, group, src_list):
     return mk_igmp_msg(IGMPV2_REPORT, group, 0, [])
@@ -141,7 +146,7 @@ def mk_igmp_report(igmp_version, src, report_type, group, src_list, filter_mode)
             print "unsupported IGMP report type " + report_type + ". Supported values: 'join' and 'lave'" 
             sys.exit(1)
     elif igmp_version == 'v2':
-        dst = ALL_MC_ROUTERS_IN_LAN
+        dst = group
         if report_type == 'join':
             mk_igmp = mk_igmpv2_join_msg
             src_list = []
